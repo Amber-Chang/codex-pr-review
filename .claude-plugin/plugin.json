@@ -1,0 +1,28 @@
+{
+  "name": "codex-pr-review",
+  "version": "0.1.0",
+  "description": "Codex-native PR review harness: load repo-backed review knowledge, read a GitHub PR through gh, build an evidence-based review packet, and post confirmed comments back to the PR.",
+  "author": {
+    "name": "Amber-Chang"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "pull-request",
+    "codex",
+    "github",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex PR Review",
+    "shortDescription": "Repo-backed, evidence-based GitHub PR review for Codex",
+    "longDescription": "Turn a GitHub PR URL or number into a repeatable Codex review flow: load the consuming project's own review knowledge, read the PR diff through gh, build a review packet, and post only confirmed, anchorable comments back to the PR.",
+    "developerName": "Amber-Chang",
+    "category": "Coding",
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
+  }
+}

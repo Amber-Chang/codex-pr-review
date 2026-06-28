@@ -79,7 +79,18 @@ plugin 不會 crash，而是退回**安全預設**：
 `error-patterns.example.json`。若你要用，請在自己專案內維護一份 patterns 檔，
 並在 `review-config.json` 的 `errorPatternsPath` 指過去。
 
-## 指令用法
+## 一鍵安裝（Claude Code）
+
+在 Claude Code 內執行：
+
+```
+/plugin marketplace add Amber-Chang/codex-pr-review
+/plugin install codex-pr-review@codex-pr-review
+```
+
+> 這是 private repo，需先在本機 `gh auth login`（背景自動更新才需另外設 `GITHUB_TOKEN`）。
+
+## 指令用法（手動 / 非 Claude Code 環境）
 
 下列 `<plugin-dir>` 指「含 `plugin.json` 的 plugin 安裝目錄」。請在**你要 review 的那個 repo 內**執行，
 腳本會自動偵測 repo root 與該專案的 review config。

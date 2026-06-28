@@ -1,0 +1,17 @@
+{
+  "name": "codex-pr-review",
+  "description": "Codex-native PR review harness: repo-backed review knowledge, gh-driven PR reading, evidence-based review packets, and confirmed comment posting.",
+  "owner": {
+    "name": "Amber-Chang"
+  },
+  "plugins": [
+    {
+      "name": "codex-pr-review",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Amber-Chang"
+      }
+    }
+  ]
+}
