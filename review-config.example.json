@@ -1,0 +1,28 @@
+{
+  "knowledgeSources": [
+    {
+      "id": "review-checklist",
+      "title": "Review Checklist",
+      "path": "docs/review-checklist.md",
+      "kind": "review-checklist"
+    },
+    {
+      "id": "contributing",
+      "title": "Contributing Guide",
+      "path": "CONTRIBUTING.md",
+      "kind": "guide"
+    },
+    {
+      "id": "code-quality",
+      "title": "Code Quality Rules",
+      "path": "docs/code-quality.md",
+      "kind": "code-quality"
+    }
+  ],
+  "moduleDocHints": [
+    { "prefix": "src/auth/", "doc": "docs/modules/auth.md" },
+    { "prefix": "src/payments/", "doc": "docs/modules/payments.md" },
+    { "prefix": "frontend/", "doc": "docs/modules/frontend.md" }
+  ],
+  "errorPatternsPath": ".codex/error-patterns.json"
+}
