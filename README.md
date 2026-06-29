@@ -149,6 +149,30 @@ node --test
 - 需要 `gh auth` 對目標 repo 有效；無效時腳本會直接報錯，請先 `gh auth login -h github.com`。
 - 跨 session 的知識存在消費端 repo 的檔案裡，而非機器本地記憶。
 
+## 搭配 Codex 當「第二模型」獨立審查（選用）
+
+這個 harness 由「**當下執行它的 agent**」來審查——裝在 Claude Code 就是 Claude 審、裝在 Codex 就是 Codex 審。若你想讓 **Codex**（不同模型家族）來審、達到「寫的人 ≠ 驗的人」的獨立性，有兩條路：
+
+### A. 直接在 Codex 裡跑（最簡單可靠）
+
+1. Codex CLI 裝好並 `codex login`。
+2. 在 Codex 安裝本套件：`codex plugin marketplace add Amber-Chang/codex-pr-review`，並**完成安裝/reload，確認 `pr-review-agent` 已出現在 `~/.codex/skills/`**。
+   > ⚠️ 只 `marketplace add` 不夠——skill 會停在 `~/.codex/.tmp/marketplaces/` 暫存區，沒同步進 `~/.codex/skills/` 的話 Codex 看不到。
+3. 在 Codex session 貼 PR URL 或叫它用 `pr-review-agent` 審。
+
+### B. 人在 Claude Code，把審查委派給 Codex（已實測可行）
+
+搭配官方 [`openai/codex-plugin-cc`](https://github.com/openai/codex-plugin-cc)（Apache-2.0）的 `/codex:rescue` 把任務交給本機 Codex：
+
+1. Codex CLI 裝好並 `codex login`。
+2. 在 **Claude Code** 裝 `openai/codex-plugin-cc`（提供 `/codex:rescue`）。
+3. 在 **Codex** 完整安裝本套件（同 A 第 2 步，務必確認 skill 已進 `~/.codex/skills/`）。
+4. 在 Claude Code 執行，例如：`/codex:rescue 用 pr-review-agent 審這個 repo 的 PR #5`。
+
+> 已驗證（2026-06-30）：`/codex:rescue` 透過 Codex app-server 開一個標準 Codex thread，會載入 `~/.codex/skills/` 的 skill，因此能調用本套件的 `pr-review-agent`。前提是 skill 確實同步進 `~/.codex/skills/`。
+
+> 與官方 `/codex:review` 的差異：`codex-plugin-cc` 自帶的 `/codex:review` 審「本地未提交改動」；本套件專做「針對某條 **GitHub PR**、用專案自帶的 `.codex/review-config.json` 規則審、並把確認的意見**貼回 PR**」。
+
 ## 致謝 / 出處
 
 本工具的**概念**啟發自 Kelly Tsai 的影片〈矽谷最近瘋談的新詞，到底是什麼？AI 下一個高薪職缺是它？〉（<https://www.youtube.com/watch?v=T_GuZBHJ2mc>）。實作為作者參考概念後與 AI 協作自行撰寫，未複製影片或其附屬程式碼。
