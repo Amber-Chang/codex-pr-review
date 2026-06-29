@@ -148,3 +148,11 @@ node --test
 
 - 需要 `gh auth` 對目標 repo 有效；無效時腳本會直接報錯，請先 `gh auth login -h github.com`。
 - 跨 session 的知識存在消費端 repo 的檔案裡，而非機器本地記憶。
+
+## 致謝 / 出處
+
+本工具的**概念**啟發自 Kelly Tsai 的影片〈矽谷最近瘋談的新詞，到底是什麼？AI 下一個高薪職缺是它？〉（<https://www.youtube.com/watch?v=T_GuZBHJ2mc>）。實作為作者參考概念後與 AI 協作自行撰寫，未複製影片或其附屬程式碼。
+
+## License
+
+MIT — 見 [`LICENSE`](LICENSE)。
