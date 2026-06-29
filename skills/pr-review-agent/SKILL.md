@@ -1,13 +1,13 @@
 ---
 name: pr-review-agent
-description: Review a GitHub PR from Codex using project-supplied review knowledge, then optionally post comments back to the PR.
+description: Review a GitHub PR using project-supplied review knowledge, then optionally post comments back to the PR. Runs in whichever agent invokes it (Claude Code or Codex).
 license: MIT
 metadata:
   author: Amber-Chang
   version: "0.1.0"
 ---
 
-Use this skill when the user pastes a GitHub PR URL or asks Codex to review a PR
+Use this skill when the user pastes a GitHub PR URL or asks for a review of a PR
 from the current repository context.
 
 `<plugin-dir>` below means the directory that contains this plugin's
@@ -17,7 +17,7 @@ root and the project's review config.
 
 ## Goal
 
-Turn a pasted PR URL or PR number into a repeatable Codex review flow:
+Turn a pasted PR URL or PR number into a repeatable PR review flow:
 
 1. Load the project's own review knowledge from repo files (via the project's
    `.codex/review-config.json`; see README)
@@ -36,7 +36,7 @@ node <plugin-dir>/prepare-pr-review.cjs <pr-url-or-number> --write /tmp/pr-revie
 ```
 
 If `gh` auth is invalid, stop and tell the user they need to re-authenticate
-before Codex can read or comment on the PR.
+before the review agent can read or comment on the PR.
 
 If the project has no `.codex/review-config.json`, the packet still builds with
 empty knowledge — review proceeds on the diff alone.
