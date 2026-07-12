@@ -29,6 +29,11 @@ Turn a pasted PR URL or PR number into a repeatable PR review flow:
 
 ### 1. Prepare the review packet
 
+Before reviewing, verify the plugin package is complete, `gh auth` is valid,
+the requested PR can be read, and all knowledge required by the project's
+review config loaded successfully. If any check fails, stop with
+`PR REVIEW BLOCKED`; do not downgrade to an ungrounded diff-only pass.
+
 Run (from the repo you are reviewing):
 
 ```bash
@@ -38,8 +43,9 @@ node <plugin-dir>/prepare-pr-review.cjs <pr-url-or-number> --write /tmp/pr-revie
 If `gh` auth is invalid, stop and tell the user they need to re-authenticate
 before the review agent can read or comment on the PR.
 
-If the project has no `.codex/review-config.json`, the packet still builds with
-empty knowledge — review proceeds on the diff alone.
+If the project has no `.codex/review-config.json`, state that the review has no
+project-specific knowledge. If the repository or request requires that
+knowledge, stop with `PR REVIEW BLOCKED`.
 
 ### 2. Review posture
 
@@ -58,8 +64,14 @@ empty knowledge — review proceeds on the diff alone.
 Use:
 
 ```text
-Overall: PASS / NEEDS_CHANGES / NEEDS_REDESIGN
+PR PASS / PR FAIL / PR REVIEW BLOCKED
 ```
+
+- `PR PASS`: the review packet and cited review evidence support no actionable
+  findings.
+- `PR FAIL`: the packet and evidence support one or more actionable findings.
+- `PR REVIEW BLOCKED`: the plugin, `gh auth`, PR access, or required knowledge
+  could not be verified. Never report `PR PASS` from an incomplete review.
 
 Then list findings by severity with:
 - violated rule / contract
@@ -67,9 +79,10 @@ Then list findings by severity with:
 - behavioral risk
 - whether it should be posted as a GitHub comment
 
-### 4. Post comments when requested
+### 4. Post comments when explicitly authorized
 
-When the user wants direct PR comments:
+Post direct PR comments only after explicit user authorization. Authorization
+for one PR does not carry over to another PR or session.
 
 1. Convert confirmed findings into JSON
 2. Save it to a temp file
