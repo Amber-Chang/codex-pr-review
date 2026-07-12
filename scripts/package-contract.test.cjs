@@ -55,6 +55,8 @@ test("README uses only the official activation result for the active skill path"
   assert.doesNotMatch(readme, /~\/\.codex\/skills/u);
   assert.match(readme, /--active-skill <official-active-skill-path>/u);
   assert.match(readme, /(official|官方)[^\n]*(activation|啟用)[^\n]*(path|路徑)/iu);
+  assert.doesNotMatch(readme, /Codex 實際可讀到/u);
+  assert.match(readme, /官方 activation 結果提供的外部 skill 路徑/u);
 });
 
 test("README documents fail-closed review results and posting authorization", () => {

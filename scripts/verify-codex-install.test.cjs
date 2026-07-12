@@ -16,6 +16,13 @@ function writeFile(root, relativePath, contents = "module.exports = {};\n") {
   return target;
 }
 
+function updateJson(root, relativePath, update) {
+  const target = path.join(root, relativePath);
+  const value = JSON.parse(fs.readFileSync(target, "utf8"));
+  update(value);
+  fs.writeFileSync(target, JSON.stringify(value));
+}
+
 function createPackage(overrides = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-install-package-"));
   const pluginVersion = overrides.pluginVersion || VERSION;
@@ -91,6 +98,35 @@ test("returns READY when package, explicit active skill, and Codex capability ma
   assert.equal(result.activeSkill.version, VERSION);
   assert.equal(result.codex.marketplaceCapability, true);
   assert.deepEqual(result.errors, []);
+  assert.match(result.guidance.join("\n"), /explicit activated skill verification/i);
+});
+
+test("returns BLOCKED when active skill points anywhere inside pluginDir", () => {
+  const pluginDir = createPackage();
+  const result = verifyInstall({
+    pluginDir,
+    activeSkillPath: path.join(pluginDir, "skills/pr-review-agent/SKILL.md"),
+    probeCodex: capableCli,
+  });
+
+  assert.equal(result.status, "BLOCKED");
+  assert.match(result.errors.join("\n"), /inside pluginDir/i);
+});
+
+test("returns BLOCKED when an external symlink points to the package skill", () => {
+  const pluginDir = createPackage();
+  const linkRoot = fs.mkdtempSync(path.join(os.tmpdir(), "codex-active-skill-link-"));
+  const linkPath = path.join(linkRoot, "SKILL.md");
+  fs.symlinkSync(path.join(pluginDir, "skills/pr-review-agent/SKILL.md"), linkPath);
+
+  const result = verifyInstall({
+    pluginDir,
+    activeSkillPath: linkPath,
+    probeCodex: capableCli,
+  });
+
+  assert.equal(result.status, "BLOCKED");
+  assert.match(result.errors.join("\n"), /inside pluginDir/i);
 });
 
 test("returns BLOCKED and names a missing required package file", () => {
@@ -109,6 +145,44 @@ test("returns BLOCKED when manifest and skill versions differ", () => {
 
   assert.equal(result.status, "BLOCKED");
   assert.match(result.errors.join("\n"), /version/i);
+});
+
+test("returns BLOCKED when required plugin manifest fields are missing", () => {
+  for (const field of ["name", "version", "skills"]) {
+    const pluginDir = createPackage();
+    updateJson(pluginDir, ".codex-plugin/plugin.json", (manifest) => delete manifest[field]);
+
+    const result = verifyInstall({ pluginDir, probeCodex: capableCli });
+
+    assert.equal(result.status, "BLOCKED", field);
+    assert.match(result.errors.join("\n"), new RegExp(`plugin manifest.*${field}`, "i"));
+  }
+});
+
+test("returns BLOCKED when required marketplace plugin fields are missing", () => {
+  for (const field of ["name", "version", "source"]) {
+    const pluginDir = createPackage();
+    updateJson(pluginDir, ".codex-plugin/marketplace.json", (manifest) => {
+      delete manifest.plugins[0][field];
+    });
+
+    const result = verifyInstall({ pluginDir, probeCodex: capableCli });
+
+    assert.equal(result.status, "BLOCKED", field);
+    assert.match(result.errors.join("\n"), new RegExp(`marketplace plugin.*${field}`, "i"));
+  }
+});
+
+test("returns BLOCKED when marketplace plugin source is not ./", () => {
+  const pluginDir = createPackage();
+  updateJson(pluginDir, ".codex-plugin/marketplace.json", (manifest) => {
+    manifest.plugins[0].source = "../plugin";
+  });
+
+  const result = verifyInstall({ pluginDir, probeCodex: capableCli });
+
+  assert.equal(result.status, "BLOCKED");
+  assert.match(result.errors.join("\n"), /marketplace plugin.*source.*\.\//i);
 });
 
 test("returns BLOCKED for malformed skill frontmatter", () => {
@@ -213,4 +287,19 @@ test("CLI --json emits machine-readable PACKAGE_ONLY output", () => {
   const result = JSON.parse(run.stdout);
   assert.equal(result.status, "PACKAGE_ONLY");
   assert.equal(result.package.valid, true);
+});
+
+test("CLI exits 2 when a path option has no value or another option follows", () => {
+  const cli = path.join(__dirname, "verify-codex-install.cjs");
+  for (const args of [
+    ["--plugin-dir"],
+    ["--plugin-dir", "--json"],
+    ["--active-skill"],
+    ["--active-skill", "--json"],
+  ]) {
+    const run = spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+
+    assert.equal(run.status, 2, args.join(" "));
+    assert.match(run.stderr, /requires a path/i);
+  }
 });

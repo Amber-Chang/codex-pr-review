@@ -106,7 +106,7 @@ codex plugin marketplace add Amber-Chang/codex-pr-review
 
 - `marketplace registered`：來源已加入 Codex，但不代表 plugin 已啟用。
 - `plugin active`：已依目前 Codex App / CLI 提供的介面完成 activation 或 reload。
-- `skill verified`：已確認 Codex 實際可讀到 `pr-review-agent`，且版本與 package 一致。
+- `skill verified`：已確認官方 activation 結果提供的外部 skill 路徑，其名稱與版本和 package 一致。
 
 完成官方 activation 或 reload 後，從官方啟用結果取得 active skill path，再以
 verifier 檢查：
@@ -118,7 +118,7 @@ node scripts/verify-codex-install.cjs --plugin-dir . --active-skill <official-ac
 
 Verifier 會回報：
 
-- `READY`：package 與 active skill 均已驗證，可以進行正式 PR review。
+- `READY`：package、Codex CLI capability 與 package 外部的 active skill 均已驗證，可以進行正式 PR review。
 - `PACKAGE_ONLY`：package 完整，但 active skill 尚未驗證；不可宣稱 Codex 已可執行。
 - `BLOCKED`：必要檔案、CLI capability、skill 或版本驗證失敗。
 

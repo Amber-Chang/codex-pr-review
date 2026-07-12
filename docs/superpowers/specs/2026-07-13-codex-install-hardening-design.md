@@ -3,8 +3,16 @@
 
 # Codex 安裝強化與 Live PR Review 設計
 
-> 狀態：PM 已批准方向，等待書面規格確認
+> 狀態：PM 已批准，實作完成；live review 受 Codex activation 能力阻擋
 > 日期：2026-07-13
+
+## 實作驗證紀錄
+
+- 本地測試與 package verifier 已通過；package 狀態為 `PACKAGE_ONLY`。
+- Codex CLI `0.125.0` 可使用 marketplace `add / upgrade / remove`，但未提供 plugin activation/install 指令。
+- GitHub CLI 已登入，`Amber-Chang/builder-pm#7` 為 open、ready-for-review。
+- 因無官方 activation 結果可提供 active skill 路徑，正式外掛審查依 fail-closed 契約回報 `PR REVIEW BLOCKED`。
+- 未以 repository 內的 skill 路徑冒充 active install，也未向 builder-pm PR 回貼留言。
 
 ## 1. 目標
 

@@ -49,6 +49,24 @@ function readSkill(file, label, errors) {
   return { name, version, path: file };
 }
 
+function requireFields(value, fields, label, errors) {
+  for (const field of fields) {
+    if (typeof value?.[field] !== "string" || value[field].trim() === "") {
+      errors.push(`${label} requires ${field}`);
+    }
+  }
+}
+
+function isPathInside(root, candidate) {
+  const canonicalRoot = fs.realpathSync(root);
+  const resolvedCandidate = path.resolve(candidate);
+  const canonicalCandidate = fs.existsSync(resolvedCandidate)
+    ? fs.realpathSync(resolvedCandidate)
+    : resolvedCandidate;
+  const relative = path.relative(canonicalRoot, canonicalCandidate);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== "..");
+}
+
 function verifyPackage(pluginDir) {
   const root = path.resolve(pluginDir);
   const errors = [];
@@ -58,6 +76,8 @@ function verifyPackage(pluginDir) {
     "marketplace manifest",
     errors,
   );
+
+  if (plugin) requireFields(plugin, ["name", "version", "skills"], "Plugin manifest", errors);
 
   let skill = null;
   if (plugin?.skills) {
@@ -77,9 +97,23 @@ function verifyPackage(pluginDir) {
     }
   }
 
-  const marketplacePlugin = marketplace?.plugins?.find((item) => item.name === plugin?.name);
+  const marketplacePlugin = marketplace?.plugins?.find((item) => item.name === plugin?.name)
+    || marketplace?.plugins?.[0];
   if (marketplace && !marketplacePlugin) {
     errors.push("Marketplace manifest does not declare the plugin");
+  } else if (marketplacePlugin) {
+    requireFields(
+      marketplacePlugin,
+      ["name", "version", "source"],
+      "Marketplace plugin",
+      errors,
+    );
+    if (marketplacePlugin.source && marketplacePlugin.source !== "./") {
+      errors.push('Marketplace plugin source must be "./"');
+    }
+    if (plugin?.name && marketplacePlugin.name && marketplacePlugin.name !== plugin.name) {
+      errors.push(`Marketplace plugin name mismatch: expected ${plugin.name}`);
+    }
   }
 
   const versions = [plugin?.version, marketplacePlugin?.version, skill?.version].filter(Boolean);
@@ -149,6 +183,11 @@ function verifyInstall({ pluginDir, activeSkillPath, probeCodex = defaultProbeCo
     return result;
   }
 
+  if (isPathInside(packageResult.root, activeSkillPath)) {
+    result.errors.push("Active skill path must not be inside pluginDir");
+    return result;
+  }
+
   const activeErrors = [];
   result.activeSkill = readSkill(path.resolve(activeSkillPath), "active skill", activeErrors);
   result.errors.push(...activeErrors);
@@ -171,20 +210,27 @@ function verifyInstall({ pluginDir, activeSkillPath, probeCodex = defaultProbeCo
     );
   }
 
-  if (result.errors.length === 0) result.status = "READY";
+  if (result.errors.length === 0) {
+    result.status = "READY";
+    result.guidance.push("READY confirms explicit activated skill verification at the supplied path.");
+  }
   return result;
 }
 
 function parseArgs(argv) {
   const options = { pluginDir: ".", json: false };
+  function readPathValue(option, index) {
+    const value = argv[index + 1];
+    if (!value || value.startsWith("-")) throw new Error(`${option} requires a path`);
+    return value;
+  }
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--plugin-dir") options.pluginDir = argv[++index];
-    else if (argument === "--active-skill") options.activeSkillPath = argv[++index];
+    if (argument === "--plugin-dir") options.pluginDir = readPathValue(argument, index++);
+    else if (argument === "--active-skill") options.activeSkillPath = readPathValue(argument, index++);
     else if (argument === "--json") options.json = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
-  if (!options.pluginDir) throw new Error("--plugin-dir requires a path");
   return options;
 }
 
