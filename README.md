@@ -4,6 +4,9 @@
 review 知識不存在機器本地記憶，而是由**消費端專案自己提供**（讀專案 repo 內的檔案），
 讓同一套引擎可以服務任何專案。
 
+本 repository 是公開（public）專案；讀取公開內容不需要 GitHub repository 權限，
+但 review 與回貼仍需要可存取目標 PR 的 `gh auth`。
+
 ## 這個 plugin 做什麼
 
 1. 載入消費端專案自供的 review 知識（SPEC / PRD / 開發守則 / module 文件等）
@@ -88,7 +91,39 @@ plugin 不會 crash，而是退回**安全預設**：
 /plugin install codex-pr-review@codex-pr-review
 ```
 
-> 這是 private repo，需先在本機 `gh auth login`（背景自動更新才需另外設 `GITHUB_TOKEN`）。
+Claude Code 的 marketplace 與 plugin 安裝是兩個步驟；完成後請 reload，確認
+`pr-review-agent` 已可使用。
+
+## Codex 啟用與驗證
+
+Codex CLI 可先註冊 marketplace：
+
+```bash
+codex plugin marketplace add Amber-Chang/codex-pr-review
+```
+
+目前流程刻意區分三個階段，避免把「已註冊」誤認成「可執行」：
+
+- `marketplace registered`：來源已加入 Codex，但不代表 plugin 已啟用。
+- `plugin active`：已依目前 Codex App / CLI 提供的介面完成 activation 或 reload。
+- `skill verified`：已確認官方 activation 結果提供的外部 skill 路徑，其名稱與版本和 package 一致。
+
+完成官方 activation 或 reload 後，從官方啟用結果取得 active skill path，再以
+verifier 檢查：
+
+```bash
+node scripts/verify-codex-install.cjs --plugin-dir .
+node scripts/verify-codex-install.cjs --plugin-dir . --active-skill <official-active-skill-path>
+```
+
+Verifier 會回報：
+
+- `READY`：package、Codex CLI capability 與 package 外部的 active skill 均已驗證，可以進行正式 PR review。
+- `PACKAGE_ONLY`：package 完整，但 active skill 尚未驗證；不可宣稱 Codex 已可執行。
+- `BLOCKED`：必要檔案、CLI capability、skill 或版本驗證失敗。
+
+不要自行複製檔案到 Codex 私有目錄；activation 方式以當前 Codex App / CLI
+提供的官方介面為準。
 
 ## 指令用法（手動 / 非 Claude Code 環境）
 
@@ -110,6 +145,14 @@ node <plugin-dir>/post-pr-review-comments.cjs <pr-url-or-number> --input /tmp/pr
 兩個腳本都支援 `--config <path>` 覆寫 config 位置（預設為 `<repo-root>/.codex/review-config.json`）。
 
 ## Comment JSON 格式
+
+正式 review 結果只使用三種狀態：`PR PASS`、`PR FAIL`、
+`PR REVIEW BLOCKED`。只有 packet 與 review 證據完整時才能輸出 `PR PASS`；plugin、
+`gh auth`、PR 或必要 knowledge 無法驗證時必須 fail closed，輸出
+`PR REVIEW BLOCKED`。
+
+只有取得使用者明確授權（explicit authorization）後才能回貼。授權只適用於當次
+指定的 PR；不得回貼推測性、低信心或純風格意見。
 
 錨定到單一 diff 行的 line comment：
 
@@ -156,9 +199,9 @@ node --test
 ### A. 直接在 Codex 裡跑（最簡單可靠）
 
 1. Codex CLI 裝好並 `codex login`。
-2. 在 Codex 安裝本套件：`codex plugin marketplace add Amber-Chang/codex-pr-review`，並**完成安裝/reload，確認 `pr-review-agent` 已出現在 `~/.codex/skills/`**。
-   > ⚠️ 只 `marketplace add` 不夠——skill 會停在 `~/.codex/.tmp/marketplaces/` 暫存區，沒同步進 `~/.codex/skills/` 的話 Codex 看不到。
-3. 在 Codex session 貼 PR URL 或叫它用 `pr-review-agent` 審。
+2. 用上方指令註冊 marketplace，並依目前 Codex App / CLI 的官方介面完成 activation 或 reload。
+3. 從官方 activation 結果取得 active skill path，傳給 verifier；只有得到 `READY` 才代表 `pr-review-agent` 已可供 Codex 使用。
+4. 在 Codex session 貼 PR URL 或叫它用 `pr-review-agent` 審。
 
 ### B. 人在 Claude Code，把審查委派給 Codex（已實測可行）
 
@@ -166,10 +209,10 @@ node --test
 
 1. Codex CLI 裝好並 `codex login`。
 2. 在 **Claude Code** 裝 `openai/codex-plugin-cc`（提供 `/codex:rescue`）。
-3. 在 **Codex** 完整安裝本套件（同 A 第 2 步，務必確認 skill 已進 `~/.codex/skills/`）。
+3. 在 **Codex** 完成同 A 的官方 activation 與 verifier 檢查，確認狀態為 `READY`。
 4. 在 Claude Code 執行，例如：`/codex:rescue 用 pr-review-agent 審這個 repo 的 PR #5`。
 
-> 已驗證（2026-06-30）：`/codex:rescue` 透過 Codex app-server 開一個標準 Codex thread，會載入 `~/.codex/skills/` 的 skill，因此能調用本套件的 `pr-review-agent`。前提是 skill 確實同步進 `~/.codex/skills/`。
+> 已驗證（2026-06-30）：`/codex:rescue` 透過 Codex app-server 開一個標準 Codex thread，能調用已由官方流程啟用且經 verifier 確認為 `READY` 的 `pr-review-agent`。
 
 > 與官方 `/codex:review` 的差異：`codex-plugin-cc` 自帶的 `/codex:review` 審「本地未提交改動」；本套件專做「針對某條 **GitHub PR**、用專案自帶的 `.codex/review-config.json` 規則審、並把確認的意見**貼回 PR**」。
 
